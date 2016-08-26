@@ -284,10 +284,7 @@ class Limiter(object):
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
-        name = ("%s.%s" % (
-                view_func.__module__, view_func.__name__
-            ) if view_func else ""
-        )
+        name = endpoint
         if (not request.endpoint
             or not self.enabled
             or view_func == current_app.send_static_file
@@ -399,7 +396,7 @@ class Limiter(object):
                 else:
                     six.reraise(*sys.exc_info())
 
-    def __limit_decorator(self, limit_value,
+    def __limit_decorator(self, limit_value, endpoint,
                           key_func=None, shared=False,
                           scope=None,
                           per_method=False,
@@ -411,7 +408,7 @@ class Limiter(object):
         def _inner(obj):
             func = key_func or self._key_func
             is_route = not isinstance(obj, Blueprint)
-            name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
+            name = endpoint
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
                 dynamic_limit = ExtLimit(limit_value, func, _scope, per_method,
@@ -451,8 +448,7 @@ class Limiter(object):
                 return __inner
         return _inner
 
-
-    def limit(self, limit_value, key_func=None, per_method=False,
+    def limit(self, limit_value, endpoint, key_func=None, per_method=False,
               methods=None, error_message=None, exempt_when=None):
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -469,12 +465,11 @@ class Limiter(object):
          error message used in the response.
         :return:
         """
-        return self.__limit_decorator(limit_value, key_func, per_method=per_method,
+        return self.__limit_decorator(limit_value, endpoint, key_func, per_method=per_method,
                                       methods=methods, error_message=error_message,
                                       exempt_when=exempt_when)
 
-
-    def shared_limit(self, limit_value, scope, key_func=None,
+    def shared_limit(self, limit_value, endpoint, scope, key_func=None,
                      error_message=None, exempt_when=None):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -489,21 +484,19 @@ class Limiter(object):
          error message used in the response.
         """
         return self.__limit_decorator(
-            limit_value, key_func, True, scope, error_message=error_message,
+            limit_value, endpoint, key_func, True, scope, error_message=error_message,
             exempt_when=exempt_when
         )
 
-
-    def exempt(self, obj):
+    def exempt(self, obj, endpoint):
         """
         decorator to mark a view or all views in a blueprint as exempt from rate limits.
         """
         if not isinstance(obj, Blueprint):
-            name = "%s.%s" % (obj.__module__, obj.__name__)
             @wraps(obj)
             def __inner(*a, **k):
                 return obj(*a, **k)
-            self._exempt_routes.add(name)
+            self._exempt_routes.add(endpoint)
             return __inner
         else:
             self._blueprint_exempt.add(obj.name)
