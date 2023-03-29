@@ -28,7 +28,7 @@ setup(
     license="MIT",
     url="https://flask-limiter.readthedocs.org",
     zip_safe=False,
-    version=versioneer.get_version(),
+    version="0.9.3",
     cmdclass=versioneer.get_cmdclass(),
     install_requires=list(REQUIREMENTS),
     classifiers=[k for k in open('CLASSIFIERS').read().split('\n') if k],
